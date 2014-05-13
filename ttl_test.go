@@ -17,13 +17,13 @@ func TestSecondArgumentIsOk(t *testing.T) {
 func TestCanStoreInformation(t *testing.T) {
 	cache := NewTTL()
 	defer cache.Quit()
-	cache.Set("key", "value", 5*time.Second)
+	cache.Set("key", "some value", 5*time.Second)
 	actual, ok := cache.Get("key")
 	if ok != true {
 		t.Errorf("Expected: %#v; Actual: %#v\n", true, ok)
 	}
-	if actual.(string) != "value" {
-		t.Errorf("Expected: %#v; Actual: %#v\n", "value", actual)
+	if actual.(string) != "some value" {
+		t.Errorf("Expected: %#v; Actual: %#v\n", "some value", actual)
 	}
 }
 
@@ -83,5 +83,38 @@ func TestPruneRemovesExpiredEntries(t *testing.T) {
 	cache.Get("force following lines to be done after Prune completes by serializing with a call to Get")
 	if len(cache.db) != 3 {
 		t.Errorf("Expected: %#v; Actual: %#v\n", 3, len(cache.db))
+	}
+}
+
+func TestGetOrSet(t *testing.T) {
+	cache := NewTTL()
+	defer cache.Quit()
+	var callbackInvoked bool
+	actual := cache.GetOrSet("key", 1*time.Second, func() interface{} {
+		callbackInvoked = true
+		return interface{}("some value")
+	})
+	if callbackInvoked != true {
+		t.Errorf("Expected: %#v; Actual: %#v\n", true, callbackInvoked)
+	}
+	if actual.(string) != "some value" {
+		t.Errorf("Expected: %#v; Actual: %#v\n", "some value", actual)
+	}
+}
+
+func TestGetOrSetRespectsExpiryTime(t *testing.T) {
+	cache := NewTTL()
+	defer cache.Quit()
+	var callbackInvoked bool
+	cache.Set("key", interface{}("ignored"), -1*time.Second)
+	actual := cache.GetOrSet("key", time.Second, func() interface{} {
+		callbackInvoked = true
+		return interface{}("some value")
+	})
+	if callbackInvoked != true {
+		t.Errorf("Expected: %#v; Actual: %#v\n", true, callbackInvoked)
+	}
+	if actual.(string) != "some value" {
+		t.Errorf("Expected: %#v; Actual: %#v\n", "some value", actual)
 	}
 }

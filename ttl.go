@@ -56,6 +56,26 @@ func (self *TTL) Get(key string) (interface{}, bool) {
 	return res.value, res.ok
 }
 
+// GetOrSet attempts to get the value associated with the given key,
+// and when the result would be not found, it sets the value to the
+// result of invoking the provided call back function.
+func (self *TTL) GetOrSet(key string, ttl time.Duration, fn func() interface{}) interface{} {
+	rq := make(chan interface{})
+	self.queue <- func() {
+		item, ok := self.db[key]
+		if ok {
+			if item.expiry > time.Now().UnixNano() {
+				rq <- item.value
+				return
+			}
+		}
+		value := fn()
+		self.db[key] = entry{value, time.Now().UnixNano() + int64(ttl)}
+		rq <- value
+	}
+	return <-rq
+}
+
 // Prune removes all values from cache that have expired.
 func (self *TTL) Prune() {
 	self.queue <- func() {
