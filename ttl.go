@@ -4,6 +4,7 @@ import (
 	"time"
 )
 
+// TTL represents a Time To Live (TTL) cache data structure.
 type TTL struct {
 	db    map[string]entry
 	queue chan func()
@@ -30,7 +31,7 @@ func (self *TTL) Quit() {
 // for that value.
 func (self *TTL) Set(key string, value interface{}, ttl time.Duration) {
 	self.queue <- func() {
-		// time.Duration represents number of nanoseconds
+		// NOTE: time.Duration represents number of nanoseconds
 		self.db[key] = entry{value, time.Now().UnixNano() + int64(ttl)}
 	}
 }
@@ -43,8 +44,7 @@ func (self *TTL) Get(key string) (interface{}, bool) {
 	self.queue <- func() {
 		entry, ok := self.db[key]
 		if ok {
-			now := time.Now().UnixNano()
-			if entry.expiry > now {
+			if entry.expiry > time.Now().UnixNano() {
 				rq <- result{entry.value, ok}
 				return
 			}
@@ -61,7 +61,7 @@ func (self *TTL) Prune() {
 	self.queue <- func() {
 		now := time.Now().UnixNano()
 		for k, v := range self.db {
-			if v.expiry > now {
+			if v.expiry <= now {
 				delete(self.db, k)
 			}
 		}

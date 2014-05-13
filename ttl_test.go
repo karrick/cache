@@ -57,8 +57,8 @@ func TestReturnsNothingAfterExpiration(t *testing.T) {
 func TestPrunesExpiredEntryOnGet(t *testing.T) {
 	cache := NewTTL()
 	defer cache.Quit()
-	cache.Set("key1", "value", -1)
-	cache.Set("key2", "value", -1)
+	cache.Set("key1", "value", -5)
+	cache.Set("key2", "value", -5)
 	value, ok := cache.Get("key1")
 	if ok != false {
 		t.Errorf("Expected: %#v; Actual: %#v\n", false, ok)
@@ -74,10 +74,14 @@ func TestPrunesExpiredEntryOnGet(t *testing.T) {
 func TestPruneRemovesExpiredEntries(t *testing.T) {
 	cache := NewTTL()
 	defer cache.Quit()
-	cache.Set("key1", "value", -5)
-	cache.Set("key2", "value", 5*time.Second)
+	cache.Set("key1", "should be gone", -5)
+	cache.Set("key2", "should also be gone", -5)
+	cache.Set("key3", "should be there", 5*time.Second)
+	cache.Set("key4", "should also be there", 5*time.Second)
+	cache.Set("key5", "should also be there, also", 5*time.Second)
 	cache.Prune()
-	if len(cache.db) != 1 {
-		t.Errorf("Expected: %#v; Actual: %#v\n", 1, len(cache.db))
+	cache.Get("force following lines to be done after Prune completes by serializing with a call to Get")
+	if len(cache.db) != 3 {
+		t.Errorf("Expected: %#v; Actual: %#v\n", 3, len(cache.db))
 	}
 }
